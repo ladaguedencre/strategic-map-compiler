@@ -16,4 +16,11 @@ src/parser.hpp
 src/region.hpp
 src/compiler.cpp
 src/compiler.hpp
-third-party/nlohmann/json.hpp)
+src/visualize.hpp
+src/visualize.cpp
+src/projections.hpp
+src/projections.cpp
+
+third-party/nlohmann/json.hpp
+third-party/libbmp/libbmp.h
+third-party/libbmp/libbmp.cpp)

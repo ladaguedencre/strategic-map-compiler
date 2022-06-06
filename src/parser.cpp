@@ -1,4 +1,5 @@
 #include "parser.hpp"
+#include "projections.hpp"
 #include "nlohmann/json.hpp"
 
 #include <iostream>
@@ -9,16 +10,33 @@ using json = nlohmann::json;
 
 namespace {
 
-    Point mercatorProjection(float lat, float lon)
+    bool parsePolygon(json polygonJson, Polygon& polygon)
     {
-        float mapWidth = 396;
-        float mapHeight = 240;
-
-        float x = (lon + 180) * (mapWidth / 360);
-        float latRad = lat * M_PI/180;
-        float mercN = log(tan((M_PI / 4) + (latRad / 2)));
-        float y = (mapHeight / 2) - (mapWidth * mercN / (2 * M_PI));
-        return Point{x, y};
+        auto innerArray = polygonJson[0];
+        if (!innerArray.is_array())
+        {
+            return false;
+        }
+        for (json::iterator it = innerArray.begin(); it != innerArray.end(); it++)
+        {
+            if (!(*it).is_array() || (*it).size() != 2 || !(*it)[0].is_number() || !(*it)[1].is_number())
+            {
+                return false;
+            }
+            float lat = (*it)[1].get<float>();
+            float lon = (*it)[1].get<float>();
+            if (lat < -90 || lat > 90 || lon < -180 || lon > 180)
+            {
+                return false;
+            }
+            Point point = gallProjection((*it)[1].get<float>(), (*it)[0].get<float>());
+            if (isnan(point.x) || isnan(point.y))
+            {
+                return false;
+            }
+            polygon.push_back(point);
+        }
+        return true;
     }
 
     bool parseGeometry(json geometryJson, Region& region)
@@ -36,28 +54,25 @@ namespace {
         std::string type = typeJson.get<std::string>();
         if (type == "Polygon")
         {
-            auto innerArray = coordsJson[0];
-            if (!innerArray.is_array())
+            Polygon polygon;
+            if (!parsePolygon(coordsJson, polygon))
             {
                 return false;
             }
-            std::vector<Point> vp;
-            for (json::iterator it = innerArray.begin(); it != innerArray.end(); it++)
-            {
-                if (!(*it).is_array() || (*it).size() != 2 || !(*it)[0].is_number() || !(*it)[1].is_number())
-                {
-                    return false;
-                }
-                vp.push_back(mercatorProjection((*it)[0].get<float>(), (*it)[1].get<float>()));
-            }
-            region.polygons.push_back(vp);
+            region.polygons.push_back(polygon);
         }
         else
         {
-            // TODO: parse multipolygon
-            return false;
+            for (json::iterator it = coordsJson.begin(); it != coordsJson.end(); it++)
+            {
+                Polygon polygon;
+                if (!parsePolygon((*it), polygon))
+                {
+                    continue;
+                }
+                region.polygons.push_back(polygon);
+            }
         }
-        
         return true;
     }
 
