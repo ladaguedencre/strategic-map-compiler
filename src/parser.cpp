@@ -8,6 +8,19 @@
 using json = nlohmann::json;
 
 namespace {
+
+    Point mercatorProjection(float lat, float lon)
+    {
+        float mapWidth = 396;
+        float mapHeight = 240;
+
+        float x = (lon + 180) * (mapWidth / 360);
+        float latRad = lat * M_PI/180;
+        float mercN = log(tan((M_PI / 4) + (latRad / 2)));
+        float y = (mapHeight / 2) - (mapWidth * mercN / (2 * M_PI));
+        return Point{x, y};
+    }
+
     bool parseGeometry(json geometryJson, Region& region)
     {
         if (!geometryJson.is_object())
@@ -35,7 +48,7 @@ namespace {
                 {
                     return false;
                 }
-                vp.push_back(Point{(*it)[0].get<float>(), (*it)[1].get<float>()});
+                vp.push_back(mercatorProjection((*it)[0].get<float>(), (*it)[1].get<float>()));
             }
             region.polygons.push_back(vp);
         }

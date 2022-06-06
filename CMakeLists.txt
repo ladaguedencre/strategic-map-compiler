@@ -14,4 +14,6 @@ add_executable(strategic_map_compiler src/main.cpp
 src/parser.cpp 
 src/parser.hpp
 src/region.hpp
+src/compiler.cpp
+src/compiler.hpp
 third-party/nlohmann/json.hpp)
